@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Class Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --board: #2E4034;
+    --board-dark: #24332A;
+    --board-darker: #1C271F;
+    --chalk: #F2EFE4;
+    --chalk-dim: #C7CFC5;
+    --chalk-yellow: #E8C468;
+    --chalk-pink: #E38B96;
+    --chalk-blue: #7FB3D5;
+    --chalk-mint: #8FBC94;
+    --chalk-orange: #E0956B;
+    --chalk-lilac: #B79FCB;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--board);
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(255,255,255,0.03) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 90%, rgba(255,255,255,0.025) 0%, transparent 50%);
+    color: var(--chalk);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--chalk-yellow); color: var(--board-darker); }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--chalk-yellow); outline-offset: 2px; }
+
+  .app { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: 240px; flex-shrink: 0; background: var(--board-darker);
+    padding: 24px 16px; display: flex; flex-direction: column; gap: 18px;
+    border-right: 1px dashed rgba(242,239,228,0.15);
+  }
+  .brand { font-family: 'Permanent Marker', cursive; font-size: 24px; line-height: 1.15;
+    color: var(--chalk-yellow); transform: rotate(-1deg); padding: 0 4px; }
+  .brand-sub { font-size: 12px; color: var(--chalk-dim); margin-top: 2px; padding: 0 4px; }
+  .class-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+  .class-tab {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: rgba(242,239,228,0.05); border: 1px solid rgba(242,239,228,0.1);
+    border-radius: var(--radius); padding: 10px 12px; color: var(--chalk); font-size: 14px;
+    font-weight: 500; transition: background 0.15s, border-color 0.15s;
+  }
+  .class-tab:hover { background: rgba(242,239,228,0.09); }
+  .class-tab.active { background: rgba(242,239,228,0.1); border-color: var(--tab-color, var(--chalk-yellow));
+    box-shadow: inset 3px 0 0 var(--tab-color, var(--chalk-yellow)); }
+  .swatch { width: 12px; height: 12px; border-radius: 50%; background: var(--sw-color, var(--chalk-yellow));
+    flex-shrink: 0; box-shadow: 0 0 0 2px rgba(0,0,0,0.15); }
+  .class-tab-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty-classes { font-size: 13px; color: var(--chalk-dim); padding: 8px 4px; line-height: 1.5; }
+  .add-class-btn {
+    background: transparent; border: 1px dashed rgba(242,239,228,0.3); border-radius: var(--radius);
+    color: var(--chalk-dim); padding: 10px 12px; font-size: 14px; font-weight: 500; text-align: left;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .add-class-btn:hover { border-color: var(--chalk-yellow); color: var(--chalk-yellow); }
+  .sidebar-footer { margin-top: auto; font-size: 11px; color: rgba(199,207,197,0.5); }
+  .sidebar-footer button { background: none; border: none; color: rgba(199,207,197,0.6); font-size: 11px;
+    text-decoration: underline; padding: 0; }
+  .sidebar-footer button:hover { color: var(--chalk-pink); }
+
+  /* ---------- Main ---------- */
+  .main { flex: 1; padding: 32px 40px 60px; min-width: 0; }
+  .main-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+    margin-bottom: 18px; flex-wrap: wrap; }
+  .class-title-row { display: flex; align-items: center; gap: 12px; }
+  .class-title-dot { width: 16px; height: 16px; border-radius: 50%; background: var(--cur-color, var(--chalk-yellow));
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.15); }
+  .class-title { font-family: 'Permanent Marker', cursive; font-size: 30px; color: var(--chalk); transform: rotate(-0.5deg); }
+  .class-title-actions { display: flex; gap: 10px; margin-left: 6px; }
+  .icon-btn { background: transparent; border: 1px solid rgba(242,239,228,0.2); border-radius: 6px;
+    color: var(--chalk-dim); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: border-color 0.15s, color 0.15s; }
+  .icon-btn:hover { border-color: var(--chalk-pink); color: var(--chalk-pink); }
+  .primary-btn { background: var(--chalk-yellow); color: var(--board-darker); border: none; border-radius: var(--radius);
+    padding: 11px 18px; font-size: 14px; font-weight: 700; box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+    transition: transform 0.1s, box-shadow 0.1s; }
+  .primary-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 0 rgba(0,0,0,0.2); }
+  .primary-btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+  .ghost-btn { background: transparent; color: var(--chalk); border: 1px solid rgba(242,239,228,0.3);
+    border-radius: var(--radius); padding: 10px 16px; font-size: 14px; font-weight: 600; }
+  .ghost-btn:hover { border-color: var(--chalk); }
+
+  /* Weeks panel */
+  .weeks-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .new-week-btn { background: transparent; border: 1px dashed rgba(242,239,228,0.35); border-radius: 20px;
+    color: var(--chalk-dim); padding: 7px 14px; font-size: 12.5px; font-weight: 600;
+    transition: border-color 0.15s, color 0.15s; }
+  .new-week-btn:hover { border-color: var(--chalk-yellow); color: var(--chalk-yellow); }
+  .week-chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .week-chip {
+    position: relative; display: flex; align-items: center; gap: 6px; background: rgba(242,239,228,0.05);
+    border: 1px solid rgba(242,239,228,0.15); border-radius: 20px; padding: 6px 8px 6px 12px; font-size: 12.5px;
+    color: var(--chalk-dim); cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .week-chip:hover { background: rgba(242,239,228,0.09); color: var(--chalk); }
+  .week-chip.active { border-color: var(--tab-color, var(--chalk-yellow)); color: var(--chalk); background: rgba(242,239,228,0.1); }
+  .week-chip-count { font-family: 'IBM Plex Mono', monospace; font-size: 10px; background: rgba(242,239,228,0.12);
+    border-radius: 8px; padding: 1px 6px; }
+  .week-chip-del { background: none; border: none; color: var(--chalk-dim); font-size: 12px; opacity: 0.55;
+    padding: 4px; transition: opacity 0.15s, color 0.15s; }
+  .week-chip-del:hover, .week-chip-del:active { color: var(--chalk-pink); opacity: 1; }
+  .empty-weeks { font-size: 12.5px; color: var(--chalk-dim); font-style: italic; }
+
+  /* clipboard banner */
+  .clip-banner {
+    display: flex; align-items: center; gap: 10px; background: rgba(232,196,104,0.12);
+    border: 1px dashed var(--chalk-yellow); border-radius: 8px; padding: 8px 12px; margin-bottom: 16px;
+    font-size: 12.5px; color: var(--chalk-yellow);
+  }
+  .clip-banner button { background: none; border: none; color: var(--chalk-yellow); text-decoration: underline;
+    font-size: 12.5px; padding: 0; margin-left: auto; }
+  .error-banner {
+    display: flex; align-items: center; gap: 10px; background: rgba(227,139,150,0.14);
+    border: 1px dashed var(--chalk-pink); border-radius: 8px; padding: 8px 12px; margin-bottom: 16px;
+    font-size: 12.5px; color: var(--chalk-pink);
+  }
+  .error-banner button { background: none; border: none; color: var(--chalk-pink); text-decoration: underline;
+    font-size: 12.5px; padding: 0; margin-left: auto; font-weight: 600; }
+
+  /* Week grid */
+  .week-grid-scroll { overflow-x: auto; padding-bottom: 8px; }
+  .week-grid { display: grid; grid-template-columns: repeat(7, minmax(158px, 1fr)); gap: 14px; min-width: 1160px; }
+  .day-col-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 4px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--chalk-dim); padding-bottom: 8px; border-bottom: 1px dashed rgba(242,239,228,0.25); margin-bottom: 10px;
+  }
+  .day-actions { display: flex; gap: 3px; }
+  .day-icon-btn {
+    background: transparent; border: 1px solid rgba(242,239,228,0.2); border-radius: 5px; color: var(--chalk-dim);
+    width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 10px;
+    line-height: 1; transition: border-color 0.15s, color 0.15s, opacity 0.15s;
+  }
+  .day-icon-btn:hover { border-color: var(--chalk-yellow); color: var(--chalk-yellow); }
+  .day-icon-btn[disabled] { opacity: 0.25; cursor: default; }
+  .day-icon-btn[disabled]:hover { border-color: rgba(242,239,228,0.2); color: var(--chalk-dim); }
+  .day-col { min-height: 80px; display: flex; flex-direction: column; gap: 10px; }
+
+  .entry-card {
+    position: relative; background: rgba(242,239,228,0.06); border: 1.5px dashed var(--card-color, var(--chalk-yellow));
+    border-radius: 8px; padding: 10px 11px 11px 8px; font-size: 12.5px; display: flex; flex-direction: row;
+    align-items: stretch; gap: 8px; transition: background 0.15s;
+  }
+  .period-stack { display: flex; flex-direction: column; gap: 3px; width: 6px; flex-shrink: 0; }
+  .period-block { flex: 1; background: var(--card-color, var(--chalk-yellow)); border-radius: 2px; min-height: 8px; }
+  .entry-content { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+  .entry-card:hover { background: rgba(242,239,228,0.1); cursor: pointer; }
+  .entry-times { display: flex; flex-direction: column; gap: 3px; margin-bottom: 5px; }
+  .entry-time-row {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--card-color, var(--chalk-yellow));
+    font-weight: 500; letter-spacing: 0.3px; display: flex; align-items: center; gap: 6px;
+  }
+  .p-num {
+    font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 700; background: var(--card-color, var(--chalk-yellow));
+    color: var(--board-darker); border-radius: 3px; padding: 1px 4px; flex-shrink: 0;
+  }
+  .entry-subject { font-weight: 700; color: var(--chalk); margin-bottom: 4px; line-height: 1.3; word-break: break-word; }
+  .entry-subject.normal { font-size: 13.5px; }
+  .entry-subject.big { font-size: 15px; }
+  .entry-subject.huge { font-size: 16.5px; }
+  .entry-materials { color: var(--chalk); opacity: 0.92; line-height: 1.4; word-break: break-word; margin-bottom: 4px;
+    white-space: pre-line; }
+  .entry-materials.is-test { color: var(--chalk-pink); opacity: 1; font-weight: 700; }
+  .entry-info { color: var(--chalk-dim); line-height: 1.4; word-break: break-word; font-style: italic; white-space: pre-line; }
+  .entry-info::before { content: "🎒 "; font-style: normal; }
+  .entry-del { position: absolute; top: 6px; right: 6px; background: none; border: none; color: var(--chalk-dim);
+    font-size: 13px; opacity: 0.5; transition: opacity 0.15s, color 0.15s; line-height: 1; padding: 2px 4px; z-index: 2; }
+  .entry-del:hover, .entry-del:active { color: var(--chalk-pink); opacity: 1; }
+  .day-empty { font-size: 11.5px; color: rgba(199,207,197,0.4); padding: 6px 2px; font-style: italic; }
+
+  .big-empty { margin-top: 60px; text-align: center; color: var(--chalk-dim); }
+  .big-empty .marker { font-family: 'Permanent Marker', cursive; font-size: 24px; color: var(--chalk);
+    margin-bottom: 10px; display: block; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center;
+    justify-content: center; z-index: 50; padding: 20px; }
+  .modal { background: var(--board-dark); border: 1px solid rgba(242,239,228,0.15); border-radius: 14px;
+    width: 100%; max-width: 440px; padding: 24px; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-family: 'Permanent Marker', cursive; font-weight: normal; font-size: 21px; color: var(--chalk-yellow);
+    margin: 0 0 18px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--chalk-dim); margin-bottom: 6px; letter-spacing: 0.2px; }
+  .field input[type="text"], .field input[type="time"], .field input[type="number"], .field select, .field textarea {
+    width: 100%; background: rgba(242,239,228,0.07); border: 1px solid rgba(242,239,228,0.2); border-radius: 8px;
+    padding: 10px 11px; color: var(--chalk); font-size: 14px;
+  }
+  .field textarea { resize: vertical; min-height: 52px; }
+  .field input::placeholder, .field textarea::placeholder { color: rgba(199,207,197,0.45); }
+  .row3 { display: flex; gap: 10px; }
+  .row3 .field { flex: 1; margin-bottom: 0; }
+  .row3.spaced { margin-bottom: 14px; }
+  .color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+  .color-swatch-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; background: var(--c);
+    transition: border-color 0.15s, transform 0.1s; }
+  .color-swatch-btn.selected { border-color: var(--chalk); transform: scale(1.1); }
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 18px; }
+  .modal-actions-right { display: flex; gap: 10px; }
+  .cancel-btn { background: transparent; border: none; color: var(--chalk-dim); padding: 10px 14px; font-size: 14px; font-weight: 600; }
+  .cancel-btn:hover { color: var(--chalk); }
+  .delete-link { background: none; border: none; color: var(--chalk-pink); font-size: 13px; padding: 0; text-decoration: underline; }
+
+  .loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; color: var(--chalk-dim);
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+
+  @media (max-width: 900px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; align-items: center; border-right: none;
+      border-bottom: 1px dashed rgba(242,239,228,0.15); padding: 16px; gap: 14px; }
+    .brand-block { flex-shrink: 0; }
+    .brand-sub { display: none; }
+    .class-list { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+    .class-tab { flex-shrink: 0; }
+    .add-class-btn { flex-shrink: 0; white-space: nowrap; }
+    .sidebar-footer { display: none; }
+    .main { padding: 22px 16px 48px; }
+    .week-grid { grid-template-columns: repeat(7, minmax(150px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+<div id="root"><div class="loading-screen">loading your planner…</div></div>
+<script>
+(function () {
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const DAY_FULL = { Mon:'Monday', Tue:'Tuesday', Wed:'Wednesday', Thu:'Thursday', Fri:'Friday', Sat:'Saturday', Sun:'Sunday' };
+  const PALETTE = [
+    { name: 'yellow', hex: '#E8C468' }, { name: 'pink', hex: '#E38B96' }, { name: 'blue', hex: '#7FB3D5' },
+    { name: 'mint', hex: '#8FBC94' }, { name: 'orange', hex: '#E0956B' }, { name: 'lilac', hex: '#B79FCB' },
+  ];
+  const STORAGE_KEY = 'planner-data';
+
+  let state = { classes: [], programs: [], weeks: [], selectedClassId: null, selectedWeekByClass: {} };
+  let modal = null;
+  let clipboard = null; // { sourceDay, entries: [...] }
+  let saveError = false;
+
+  const root = document.getElementById('root');
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  function getClassWeeks(clsId) {
+    return state.weeks.filter(w => w.classId === clsId).sort((a, b) => b.createdAt - a.createdAt);
+  }
+  function getSelectedWeek(clsId) {
+    const list = getClassWeeks(clsId);
+    const sel = state.selectedWeekByClass[clsId];
+    return list.find(w => w.id === sel) || list[0] || null;
+  }
+
+  async function loadState() {
+    try {
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if (res && res.value) {
+        const parsed = JSON.parse(res.value);
+        state.classes = parsed.classes || [];
+        state.weeks = parsed.weeks || [];
+        state.selectedWeekByClass = parsed.selectedWeekByClass || {};
+        state.programs = (parsed.programs || []).map(p => {
+          const periods = p.periods || 1;
+          let times = p.times;
+          if (!times) {
+            // old data: one shared "materials" text for the whole entry — put it on period 1
+            times = [{ start: p.start || '', end: p.end || '', note: p.materials || '', isTest: false }];
+            while (times.length < periods) times.push({ start: '', end: '', note: '', isTest: false });
+          } else {
+            times = times.map((t, i) => ({
+              start: t.start || '', end: t.end || '',
+              note: t.note != null ? t.note : (i === 0 ? (p.materials || '') : ''),
+              isTest: !!t.isTest
+            }));
+          }
+          const { materials, ...rest } = p;
+          return { ...rest, periods, times };
+        });
+        state.selectedClassId = parsed.selectedClassId || (state.classes[0] ? state.classes[0].id : null);
+      }
+    } catch (e) {}
+
+    // migration: every class needs at least one week; bucket any pre-existing weekId-less entries into it
+    state.classes.forEach(cls => {
+      let weeksForClass = state.weeks.filter(w => w.classId === cls.id);
+      if (weeksForClass.length === 0) {
+        const w = { id: uid(), classId: cls.id, label: 'Week 1', createdAt: Date.now() };
+        state.weeks.push(w);
+        weeksForClass = [w];
+      }
+      const earliest = weeksForClass.slice().sort((a, b) => a.createdAt - b.createdAt)[0];
+      state.programs.forEach(p => { if (p.classId === cls.id && !p.weekId) p.weekId = earliest.id; });
+      if (!state.selectedWeekByClass[cls.id]) {
+        const newest = weeksForClass.slice().sort((a, b) => b.createdAt - a.createdAt)[0];
+        state.selectedWeekByClass[cls.id] = newest.id;
+      }
+    });
+
+    render();
+  }
+
+  async function saveState(isRetry) {
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify({
+        classes: state.classes, programs: state.programs, weeks: state.weeks,
+        selectedClassId: state.selectedClassId, selectedWeekByClass: state.selectedWeekByClass
+      }), false);
+      if (saveError) { saveError = false; render(); }
+    } catch (e) {
+      console.error('Could not save planner data', e);
+      if (!isRetry) {
+        setTimeout(() => saveState(true), 800);
+      } else {
+        saveError = true; render();
+      }
+    }
+  }
+
+  function nextColor() {
+    const used = state.classes.map(c => c.color);
+    const free = PALETTE.find(p => !used.includes(p.hex));
+    return (free || PALETTE[state.classes.length % PALETTE.length]).hex;
+  }
+  function esc(str) { const d = document.createElement('div'); d.textContent = str == null ? '' : str; return d.innerHTML; }
+  function fmtTime(t) {
+    if (!t) return '';
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = ((h + 11) % 12) + 1;
+    return h12 + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+  }
+
+  function selectClass(id) {
+    state.selectedClassId = id;
+    if (!state.selectedWeekByClass[id]) {
+      const list = getClassWeeks(id);
+      if (list[0]) state.selectedWeekByClass[id] = list[0].id;
+    }
+    clipboard = null; saveState(); render();
+  }
+  function openAddClass() { modal = { type: 'class', color: nextColor() }; render(); }
+  function openConfirm(message, onConfirm) { modal = { type: 'confirm', message, onConfirm }; render(); }
+  function openNewWeek() {
+    if (!state.selectedClassId) return;
+    const weeks = getClassWeeks(state.selectedClassId);
+    const currentWeek = getSelectedWeek(state.selectedClassId);
+    const hasEntries = currentWeek && state.programs.some(p => p.weekId === currentWeek.id);
+    modal = { type: 'week', label: 'Week ' + (weeks.length + 1), canCopy: !!hasEntries, copyPrev: !!hasEntries };
+    render();
+  }
+  function openAddProgram(day) { if (!state.selectedClassId) return;
+    modal = { type: 'program', mode: 'add', day: day || 'Mon', periods: 1, times: [{ start: '', end: '', note: '', isTest: false }] }; render(); }
+  function openEditProgram(p) {
+    const periods = p.periods || 1;
+    let times = p.times ? p.times.map(t => ({ ...t })) : [{ start: p.start || '', end: p.end || '', note: p.materials || '', isTest: false }];
+    while (times.length < periods) times.push({ start: '', end: '', note: '', isTest: false });
+    modal = { type: 'program', mode: 'edit', id: p.id, day: p.day, subject: p.subject,
+      info: p.info, periods, times };
+    render();
+  }
+  function closeModal() { modal = null; render(); }
+
+  function submitClass(name, color) {
+    if (!name.trim()) return;
+    const cls = { id: uid(), name: name.trim(), color };
+    state.classes.push(cls);
+    const week = { id: uid(), classId: cls.id, label: 'Week 1', createdAt: Date.now() };
+    state.weeks.push(week);
+    state.selectedWeekByClass[cls.id] = week.id;
+    state.selectedClassId = cls.id; modal = null; saveState(); render();
+  }
+  function deleteClass(id) {
+    openConfirm('Delete this class and all its scheduled entries?', () => {
+      state.classes = state.classes.filter(c => c.id !== id);
+      state.programs = state.programs.filter(p => p.classId !== id);
+      state.weeks = state.weeks.filter(w => w.classId !== id);
+      delete state.selectedWeekByClass[id];
+      if (state.selectedClassId === id) state.selectedClassId = state.classes[0] ? state.classes[0].id : null;
+      modal = null; saveState(); render();
+    });
+  }
+
+  function submitWeek(label, copyPrev) {
+    if (!label.trim() || !state.selectedClassId) return;
+    const clsId = state.selectedClassId;
+    const prevWeek = getSelectedWeek(clsId);
+    const newWeek = { id: uid(), classId: clsId, label: label.trim(), createdAt: Date.now() };
+    state.weeks.push(newWeek);
+    if (copyPrev && prevWeek) {
+      state.programs.filter(p => p.weekId === prevWeek.id).forEach(p => {
+        state.programs.push({ ...p, id: uid(), weekId: newWeek.id, classId: clsId });
+      });
+    }
+    state.selectedWeekByClass[clsId] = newWeek.id;
+    modal = null; clipboard = null; saveState(); render();
+  }
+  function selectWeek(clsId, weekId) {
+    state.selectedWeekByClass[clsId] = weekId; clipboard = null; saveState(); render();
+  }
+  function deleteWeek(week) {
+    openConfirm(`Delete "${week.label}" and all its entries? This cannot be undone.`, () => {
+      state.weeks = state.weeks.filter(w => w.id !== week.id);
+      state.programs = state.programs.filter(p => p.weekId !== week.id);
+      if (state.selectedWeekByClass[week.classId] === week.id) {
+        const remaining = getClassWeeks(week.classId);
+        state.selectedWeekByClass[week.classId] = remaining[0] ? remaining[0].id : null;
+      }
+      clipboard = null; modal = null; saveState(); render();
+    });
+  }
+
+  function submitProgram(data) {
+    if (!data.subject.trim() || !data.times[0] || !data.times[0].start) return;
+    if (modal.mode === 'edit') {
+      const p = state.programs.find(x => x.id === modal.id);
+      if (p) Object.assign(p, data);
+    } else {
+      state.programs.push({ id: uid(), classId: state.selectedClassId, ...data });
+    }
+    modal = null; saveState(); render();
+  }
+  function deleteProgramById(id) { state.programs = state.programs.filter(p => p.id !== id); saveState(); render(); }
+  function deleteCurrentInModal() {
+    if (!modal || modal.mode !== 'edit') return;
+    const id = modal.id;
+    openConfirm('Delete this entry?', () => { deleteProgramById(id); modal = null; render(); });
+  }
+  function clearAll() {
+    openConfirm('Erase every class and every scheduled entry? This cannot be undone.', () => {
+      state = { classes: [], programs: [], weeks: [], selectedClassId: null, selectedWeekByClass: {} };
+      clipboard = null; modal = null; saveState(); render();
+    });
+  }
+
+  function copyDay(clsId, weekId, day) {
+    const entries = state.programs.filter(p => p.classId === clsId && p.weekId === weekId && p.day === day)
+      .map(p => ({ times: (p.times || []).map(t => ({ ...t })), subject: p.subject, info: p.info, periods: p.periods || 1 }));
+    clipboard = { sourceDay: day, entries };
+    render();
+  }
+  function pasteDay(clsId, weekId, day) {
+    if (!clipboard) return;
+    clipboard.entries.forEach(e => {
+      state.programs.push({ id: uid(), classId: clsId, weekId, day, ...e });
+    });
+    saveState(); render();
+  }
+  function clearClipboard() { clipboard = null; render(); }
+
+  function render() {
+    const selectedClass = state.classes.find(c => c.id === state.selectedClassId) || null;
+    root.innerHTML = `
+      <div class="app">
+        ${renderSidebar()}
+        ${renderMain(selectedClass)}
+      </div>
+      ${modal ? renderModal(selectedClass) : ''}
+    `;
+    attachHandlers(selectedClass);
+  }
+
+  function renderSidebar() {
+    const items = state.classes.map(c => `
+      <button class="class-tab ${c.id === state.selectedClassId ? 'active' : ''}" style="--tab-color:${c.color}" data-select="${c.id}">
+        <span class="swatch" style="--sw-color:${c.color}"></span>
+        <span class="class-tab-name">${esc(c.name)}</span>
+      </button>`).join('');
+    return `
+      <div class="sidebar">
+        <div class="brand-block">
+          <div class="brand">Weekly Planner</div>
+          <div class="brand-sub">one board, every class</div>
+        </div>
+        <div class="class-list">${items || '<div class="empty-classes">No classes yet.</div>'}</div>
+        <button class="add-class-btn" data-add-class>+ Add class</button>
+        <div class="sidebar-footer"><button data-clear-all>Clear all data</button></div>
+      </div>`;
+  }
+
+  function renderWeeksPanel(cls, currentWeek) {
+    const weeks = getClassWeeks(cls.id);
+    const chips = weeks.map(w => {
+      const count = state.programs.filter(p => p.weekId === w.id).length;
+      return `
+      <div class="week-chip ${currentWeek && w.id === currentWeek.id ? 'active' : ''}" data-select-week="${w.id}" style="--tab-color:${cls.color}">
+        <span>${esc(w.label)}</span>
+        <span class="week-chip-count">${count}</span>
+        <button class="week-chip-del" data-del-week="${w.id}" aria-label="Delete week" title="Delete this week">✕</button>
+      </div>`;
+    }).join('');
+    return `
+      <div class="weeks-panel">
+        <button class="new-week-btn" data-new-week>+ New week</button>
+        <div class="week-chip-list">${chips || '<span class="empty-weeks">No weeks yet.</span>'}</div>
+      </div>`;
+  }
+
+  function renderMain(cls) {
+    if (!cls) {
+      return `<div class="main"><div class="big-empty"><span class="marker">Nothing on the board yet</span>
+        Add a class on the left to start building its weekly schedule.</div></div>`;
+    }
+
+    const currentWeek = getSelectedWeek(cls.id);
+    const weeksPanel = renderWeeksPanel(cls, currentWeek);
+
+    if (!currentWeek) {
+      return `
+        <div class="main">
+          <div class="main-header">
+            <div class="class-title-row">
+              <span class="class-title-dot" style="--cur-color:${cls.color}"></span>
+              <span class="class-title">${esc(cls.name)}</span>
+              <span class="class-title-actions"><button class="icon-btn" data-del-class="${cls.id}" aria-label="Delete class">🗑</button></span>
+            </div>
+          </div>
+          ${weeksPanel}
+          <div class="big-empty"><span class="marker">No week selected</span>Click "+ New week" to start a schedule.</div>
+        </div>`;
+    }
+
+    const subjects = [...new Set(state.programs.filter(p => p.classId === cls.id).map(p => p.subject))];
+    const datalist = `<datalist id="subject-list">${subjects.map(s => `<option value="${esc(s)}">`).join('')}</datalist>`;
+
+    const clipBanner = clipboard ? `
+      <div class="clip-banner">
+        📋 Copied <strong>${DAY_FULL[clipboard.sourceDay]}</strong> (${clipboard.entries.length} ${clipboard.entries.length === 1 ? 'entry' : 'entries'}) — click Paste on another day to add it there.
+        <button data-clear-clip>clear</button>
+      </div>` : '';
+
+    const dayCols = DAYS.map(day => {
+      const entries = state.programs.filter(p => p.classId === cls.id && p.weekId === currentWeek.id && p.day === day)
+        .sort((a, b) => ((a.times && a.times[0] && a.times[0].start) || '').localeCompare((b.times && b.times[0] && b.times[0].start) || ''));
+      const hasEntries = entries.length > 0;
+
+      const cards = entries.map(p => {
+        const periods = p.periods || 1;
+        const minH = 58 + (periods - 1) * 50;
+        const times = p.times || [];
+        const timeRows = times.map((t, i) => `
+          <div class="entry-time-row">${periods > 1 ? `<span class="p-num">P${i + 1}</span>` : ''}${fmtTime(t.start)}${t.end ? '–' + fmtTime(t.end) : ''}</div>
+          ${t.note ? `<div class="entry-materials${t.isTest ? ' is-test' : ''}">${t.isTest ? '📝 ' : ''}${esc(t.note)}</div>` : ''}
+        `).join('');
+        const subjSize = periods === 1 ? 'normal' : periods === 2 ? 'big' : 'huge';
+        const stack = Array.from({ length: periods }).map(() => '<div class="period-block"></div>').join('');
+        return `
+        <div class="entry-card" style="--card-color:${cls.color}; min-height:${minH}px" data-edit-program="${p.id}">
+          <button class="entry-del" data-del-program="${p.id}" aria-label="Delete entry">✕</button>
+          <div class="period-stack">${stack}</div>
+          <div class="entry-content">
+            <div class="entry-subject ${subjSize}">${esc(p.subject)}</div>
+            <div class="entry-times">${timeRows}</div>
+            ${p.info ? `<div class="entry-info">${esc(p.info)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
+      return `
+        <div class="day-col">
+          <div class="day-col-header">
+            <span>${day}</span>
+            <span class="day-actions">
+              <button class="day-icon-btn" data-copy-day="${day}" ${!hasEntries ? 'disabled' : ''} title="Copy ${DAY_FULL[day]}'s schedule">⧉</button>
+              <button class="day-icon-btn" data-paste-day="${day}" ${!clipboard ? 'disabled' : ''} title="Paste into ${DAY_FULL[day]}">📋</button>
+              <button class="day-icon-btn" data-add-day="${day}" title="Add entry to ${DAY_FULL[day]}">+</button>
+            </span>
+          </div>
+          ${cards || '<div class="day-empty">—</div>'}
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="main">
+        <div class="main-header">
+          <div class="class-title-row">
+            <span class="class-title-dot" style="--cur-color:${cls.color}"></span>
+            <span class="class-title">${esc(cls.name)}</span>
+            <span class="class-title-actions"><button class="icon-btn" data-del-class="${cls.id}" aria-label="Delete class">🗑</button></span>
+          </div>
+          <button class="primary-btn" data-add-program>+ Add program</button>
+        </div>
+        ${weeksPanel}
+        ${saveError ? `<div class="error-banner">⚠ Couldn't save your last change to the server — it's still here on screen, but won't survive a refresh yet. <button data-retry-save>Retry save</button></div>` : ''}
+        ${clipBanner}
+        <div class="week-grid-scroll"><div class="week-grid">${dayCols}</div></div>
+        ${datalist}
+      </div>`;
+  }
+
+  function renderModal(cls) {
+    if (modal.type === 'confirm') {
+      return `
+        <div class="modal-overlay" data-overlay>
+          <div class="modal" style="max-width:380px;">
+            <h2>Are you sure?</h2>
+            <p style="font-size:14px; color:var(--chalk); line-height:1.5; margin:0 0 18px;">${esc(modal.message)}</p>
+            <div class="modal-actions"><span></span><div class="modal-actions-right">
+              <button class="cancel-btn" data-close>Cancel</button>
+              <button class="primary-btn" data-confirm-yes style="background:var(--chalk-pink);">Yes, delete</button>
+            </div></div>
+          </div>
+        </div>`;
+    }
+
+    if (modal.type === 'class') {
+      const swatches = PALETTE.map(p => `<button type="button" class="color-swatch-btn ${p.hex === modal.color ? 'selected' : ''}" style="--c:${p.hex}" data-pick-color="${p.hex}"></button>`).join('');
+      return `
+        <div class="modal-overlay" data-overlay>
+          <div class="modal">
+            <h2>New class</h2>
+            <div class="field"><label for="cls-name">Class name</label><input type="text" id="cls-name" placeholder="e.g. Grade 7C" autofocus></div>
+            <div class="field"><label>Color</label><div class="color-picker">${swatches}</div></div>
+            <div class="modal-actions"><span></span><div class="modal-actions-right">
+              <button class="cancel-btn" data-close>Cancel</button>
+              <button class="primary-btn" data-save-class>Add class</button>
+            </div></div>
+          </div>
+        </div>`;
+    }
+
+    if (modal.type === 'week') {
+      return `
+        <div class="modal-overlay" data-overlay>
+          <div class="modal">
+            <h2>New week</h2>
+            <div class="field"><label for="week-label">Label</label>
+              <input type="text" id="week-label" placeholder="e.g. 17-21 August 2026" value="${esc(modal.label || '')}" autofocus></div>
+            ${modal.canCopy ? `
+            <div class="field" style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" id="week-copy" style="width:auto;" ${modal.copyPrev ? 'checked' : ''}>
+              <label for="week-copy" style="margin:0; cursor:pointer;">Copy last week's schedule into this new week</label>
+            </div>` : ''}
+            <div class="modal-actions"><span></span><div class="modal-actions-right">
+              <button class="cancel-btn" data-close>Cancel</button>
+              <button class="primary-btn" data-save-week>Create week</button>
+            </div></div>
+          </div>
+        </div>`;
+    }
+
+    const dayOptions = DAYS.map(d => `<option value="${d}" ${d === modal.day ? 'selected' : ''}>${DAY_FULL[d]}</option>`).join('');
+    const isEdit = modal.mode === 'edit';
+    const timeRows = modal.times.map((t, i) => `
+      <div class="row3 spaced">
+        <div class="field"><label for="prog-start-${i}">Start${modal.periods > 1 ? ' (Period ' + (i + 1) + ')' : ' time'}</label>
+          <input type="time" id="prog-start-${i}" value="${t.start || ''}"></div>
+        <div class="field"><label for="prog-end-${i}">End${modal.periods > 1 ? ' (Period ' + (i + 1) + ')' : ' time'}</label>
+          <input type="time" id="prog-end-${i}" value="${t.end || ''}"></div>
+      </div>
+      <div class="field"><label for="prog-note-${i}">${modal.periods > 1 ? 'Materials — JP ' + (i + 1) : 'Materials'}</label>
+        <textarea id="prog-note-${i}" placeholder="e.g. Test, or Negative Numbers / LCM and HCF">${esc(t.note || '')}</textarea>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+          <input type="checkbox" id="prog-istest-${i}" style="width:auto;" ${t.isTest ? 'checked' : ''}>
+          <label for="prog-istest-${i}" style="margin:0; cursor:pointer; color:var(--chalk-pink);">This is a test</label>
+        </div>
+      </div>`).join('');
+    return `
+      <div class="modal-overlay" data-overlay>
+        <div class="modal">
+          <h2>${isEdit ? 'Edit' : 'New'} program — ${esc(cls.name)}</h2>
+          <div class="row3 spaced">
+            <div class="field"><label for="prog-day">Day</label><select id="prog-day">${dayOptions}</select></div>
+            <div class="field"><label for="prog-jp">Jam Pelajaran</label>
+              <select id="prog-jp">
+                <option value="1" ${modal.periods === 1 ? 'selected' : ''}>1</option>
+                <option value="2" ${modal.periods === 2 ? 'selected' : ''}>2</option>
+                <option value="3" ${modal.periods === 3 ? 'selected' : ''}>3</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label for="prog-subject">Subject</label>
+            <input type="text" id="prog-subject" list="subject-list" placeholder="e.g. Math" value="${esc(modal.subject || '')}"></div>
+          ${timeRows}
+          <div class="field"><label for="prog-info">Info</label>
+            <textarea id="prog-info" placeholder="e.g. Bring textbook, workbook, laptop">${esc(modal.info || '')}</textarea></div>
+          <div class="modal-actions">
+            <span>${isEdit ? '<button class="delete-link" data-delete-in-modal>Delete entry</button>' : ''}</span>
+            <div class="modal-actions-right">
+              <button class="cancel-btn" data-close>Cancel</button>
+              <button class="primary-btn" data-save-program>${isEdit ? 'Save changes' : 'Add program'}</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function attachHandlers(cls) {
+    const currentWeek = cls ? getSelectedWeek(cls.id) : null;
+
+    root.querySelectorAll('[data-select]').forEach(el => el.addEventListener('click', () => selectClass(el.dataset.select)));
+    const addClassBtn = root.querySelector('[data-add-class]'); if (addClassBtn) addClassBtn.addEventListener('click', openAddClass);
+    const addProgBtn = root.querySelector('[data-add-program]'); if (addProgBtn) addProgBtn.addEventListener('click', () => openAddProgram());
+    const clearBtn = root.querySelector('[data-clear-all]'); if (clearBtn) clearBtn.addEventListener('click', clearAll);
+    const clearClipBtn = root.querySelector('[data-clear-clip]'); if (clearClipBtn) clearClipBtn.addEventListener('click', clearClipboard);
+    const retryBtn = root.querySelector('[data-retry-save]'); if (retryBtn) retryBtn.addEventListener('click', () => saveState());
+    const newWeekBtn = root.querySelector('[data-new-week]'); if (newWeekBtn) newWeekBtn.addEventListener('click', openNewWeek);
+
+    root.querySelectorAll('[data-select-week]').forEach(el => el.addEventListener('click', () => selectWeek(cls.id, el.dataset.selectWeek)));
+    root.querySelectorAll('[data-del-week]').forEach(el => el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const w = state.weeks.find(x => x.id === el.dataset.delWeek);
+      if (w) deleteWeek(w);
+    }));
+
+    root.querySelectorAll('[data-del-class]').forEach(el => el.addEventListener('click', () => deleteClass(el.dataset.delClass)));
+    root.querySelectorAll('[data-del-program]').forEach(el => el.addEventListener('click', (e) => { e.stopPropagation(); deleteProgramById(el.dataset.delProgram); }));
+    root.querySelectorAll('[data-edit-program]').forEach(el => el.addEventListener('click', () => {
+      const p = state.programs.find(x => x.id === el.dataset.editProgram);
+      if (p) openEditProgram(p);
+    }));
+    root.querySelectorAll('[data-add-day]').forEach(el => el.addEventListener('click', () => openAddProgram(el.dataset.addDay)));
+    root.querySelectorAll('[data-copy-day]').forEach(el => el.addEventListener('click', () => { if (!el.disabled && currentWeek) copyDay(cls.id, currentWeek.id, el.dataset.copyDay); }));
+    root.querySelectorAll('[data-paste-day]').forEach(el => el.addEventListener('click', () => { if (!el.disabled && currentWeek) pasteDay(cls.id, currentWeek.id, el.dataset.pasteDay); }));
+
+    const overlay = root.querySelector('[data-overlay]');
+    if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    const closeBtn = root.querySelector('[data-close]'); if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    const delInModal = root.querySelector('[data-delete-in-modal]'); if (delInModal) delInModal.addEventListener('click', deleteCurrentInModal);
+
+    if (modal && modal.type === 'confirm') {
+      const yesBtn = root.querySelector('[data-confirm-yes]');
+      if (yesBtn) yesBtn.addEventListener('click', () => { const fn = modal.onConfirm; modal = null; if (fn) fn(); });
+    }
+
+    if (modal && modal.type === 'class') {
+      root.querySelectorAll('[data-pick-color]').forEach(el => el.addEventListener('click', () => { modal.color = el.dataset.pickColor; render(); }));
+      const saveBtn = root.querySelector('[data-save-class]');
+      if (saveBtn) saveBtn.addEventListener('click', () => submitClass(root.querySelector('#cls-name').value, modal.color));
+      const nameInput = root.querySelector('#cls-name');
+      if (nameInput) { nameInput.focus(); nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') root.querySelector('[data-save-class]').click(); }); }
+    }
+
+    if (modal && modal.type === 'week') {
+      const saveBtn = root.querySelector('[data-save-week]');
+      if (saveBtn) saveBtn.addEventListener('click', () => {
+        const copyEl = root.querySelector('#week-copy');
+        submitWeek(root.querySelector('#week-label').value, copyEl ? copyEl.checked : false);
+      });
+      const labelInput = root.querySelector('#week-label');
+      if (labelInput) { labelInput.focus(); labelInput.select(); labelInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') root.querySelector('[data-save-week]').click(); }); }
+    }
+
+    if (modal && modal.type === 'program') {
+      const jpSelect = root.querySelector('#prog-jp');
+      if (jpSelect) jpSelect.addEventListener('change', () => {
+        // preserve whatever the user already typed before resizing the rows
+        modal.times = modal.times.map((t, i) => ({
+          start: (root.querySelector('#prog-start-' + i) || {}).value || t.start,
+          end: (root.querySelector('#prog-end-' + i) || {}).value || t.end,
+          note: (root.querySelector('#prog-note-' + i) || {}).value || t.note,
+          isTest: (root.querySelector('#prog-istest-' + i) || {}).checked || false
+        }));
+        modal.subject = root.querySelector('#prog-subject').value;
+        modal.info = root.querySelector('#prog-info').value;
+        modal.day = root.querySelector('#prog-day').value;
+        const newPeriods = parseInt(jpSelect.value, 10);
+        while (modal.times.length < newPeriods) modal.times.push({ start: '', end: '', note: '', isTest: false });
+        modal.times = modal.times.slice(0, newPeriods);
+        modal.periods = newPeriods;
+        render();
+      });
+      const saveBtn = root.querySelector('[data-save-program]');
+      if (saveBtn) saveBtn.addEventListener('click', () => {
+        const periods = parseInt(root.querySelector('#prog-jp').value, 10) || 1;
+        const times = [];
+        for (let i = 0; i < periods; i++) {
+          times.push({
+            start: (root.querySelector('#prog-start-' + i) || {}).value || '',
+            end: (root.querySelector('#prog-end-' + i) || {}).value || '',
+            note: (root.querySelector('#prog-note-' + i) || {}).value || '',
+            isTest: (root.querySelector('#prog-istest-' + i) || {}).checked || false
+          });
+        }
+        submitProgram({
+          day: root.querySelector('#prog-day').value,
+          periods,
+          times,
+          subject: root.querySelector('#prog-subject').value,
+          info: root.querySelector('#prog-info').value,
+          weekId: currentWeek ? currentWeek.id : null
+        });
+      });
+    }
+  }
+
+  loadState();
+})();
+</script>
+</body>
+</html>
