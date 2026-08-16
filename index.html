@@ -178,6 +178,8 @@
     white-space: pre-line; }
   .p-num-inline { font-weight: 700; opacity: 0.75; }
   .entry-materials.is-test { color: var(--chalk-pink); opacity: 1; font-weight: 700; }
+  .entry-materials.is-project { color: var(--chalk-yellow); opacity: 1; font-weight: 700; }
+  .entry-materials.is-assignment { color: var(--chalk-mint); opacity: 1; font-weight: 700; }
   .entry-info { color: var(--chalk-dim); line-height: 1.4; word-break: break-word; font-style: italic; white-space: pre-line; }
   .entry-info::before { content: "🎒 "; font-style: normal; }
   .entry-del { position: absolute; top: 6px; right: 6px; background: none; border: none; color: var(--chalk-dim);
@@ -364,13 +366,13 @@
           const periods = p.periods || 1;
           let times = p.times;
           if (!times) {
-            times = [{ start: p.start || '', end: p.end || '', note: p.materials || '', isTest: false }];
-            while (times.length < periods) times.push({ start: '', end: '', note: '', isTest: false });
+            times = [{ start: p.start || '', end: p.end || '', note: p.materials || '', isTest: false, isProject: false, isAssignment: false }];
+            while (times.length < periods) times.push({ start: '', end: '', note: '', isTest: false, isProject: false, isAssignment: false });
           } else {
             times = times.map((t, i) => ({
               start: t.start || '', end: t.end || '',
               note: t.note != null ? t.note : (i === 0 ? (p.materials || '') : ''),
-              isTest: !!t.isTest
+              isTest: !!t.isTest, isProject: !!t.isProject, isAssignment: !!t.isAssignment
             }));
           }
           const { materials, ...rest } = p;
@@ -479,11 +481,11 @@
     render();
   }
   function openAddProgram(day) { if (!state.selectedClassId) return;
-    modal = { type: 'program', mode: 'add', day: day || 'Mon', periods: 1, color: null, times: [{ start: '', end: '', note: '', isTest: false }] }; render(); }
+    modal = { type: 'program', mode: 'add', day: day || 'Mon', periods: 1, color: null, times: [{ start: '', end: '', note: '', isTest: false, isProject: false, isAssignment: false }] }; render(); }
   function openEditProgram(p) {
     const periods = p.periods || 1;
-    let times = p.times ? p.times.map(t => ({ ...t })) : [{ start: p.start || '', end: p.end || '', note: p.materials || '', isTest: false }];
-    while (times.length < periods) times.push({ start: '', end: '', note: '', isTest: false });
+    let times = p.times ? p.times.map(t => ({ ...t })) : [{ start: p.start || '', end: p.end || '', note: p.materials || '', isTest: false, isProject: false, isAssignment: false }];
+    while (times.length < periods) times.push({ start: '', end: '', note: '', isTest: false, isProject: false, isAssignment: false });
     modal = { type: 'program', mode: 'edit', id: p.id, day: p.day, subject: p.subject,
       info: p.info, periods, times, color: p.color || null };
     render();
@@ -784,9 +786,12 @@
           <div class="entry-time-row">${periods > 1 ? `<span class="p-num">P${i + 1}</span>` : ''}${fmtTime(t.start)}${t.end ? '–' + fmtTime(t.end) : ''}</div>
         `).join('');
         const notesCount = times.filter(t => t.note).length;
-        const materialRows = times.map((t, i) => t.note ? `
-          <div class="entry-materials${t.isTest ? ' is-test' : ''}">${notesCount > 1 ? `<span class="p-num-inline">P${i + 1}: </span>` : ''}${t.isTest ? '📝 ' : ''}${esc(t.note)}</div>
-        ` : '').join('');
+        const materialRows = times.map((t, i) => {
+          if (!t.note) return '';
+          const kindClass = t.isTest ? ' is-test' : t.isProject ? ' is-project' : t.isAssignment ? ' is-assignment' : '';
+          const icon = t.isTest ? '📝 ' : t.isProject ? '🛠️ ' : t.isAssignment ? '✏️ ' : '';
+          return `<div class="entry-materials${kindClass}">${notesCount > 1 ? `<span class="p-num-inline">P${i + 1}: </span>` : ''}${icon}${esc(t.note)}</div>`;
+        }).join('');
         const subjSize = periods === 1 ? 'normal' : periods === 2 ? 'big' : 'huge';
         const stack = Array.from({ length: periods }).map(() => '<div class="period-block"></div>').join('');
         return `
@@ -920,9 +925,19 @@
       </div>
       <div class="field"><label for="prog-note-${i}">${modal.periods > 1 ? 'Materials — JP ' + (i + 1) : 'Materials'}</label>
         <textarea id="prog-note-${i}" placeholder="e.g. Test, or Negative Numbers / LCM and HCF">${esc(t.note || '')}</textarea>
-        <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-          <input type="checkbox" id="prog-istest-${i}" style="width:auto;" ${t.isTest ? 'checked' : ''}>
-          <label for="prog-istest-${i}" style="margin:0; cursor:pointer; color:var(--chalk-pink);">This is a test</label>
+        <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="prog-istest-${i}" style="width:auto;" ${t.isTest ? 'checked' : ''}>
+            <label for="prog-istest-${i}" style="margin:0; cursor:pointer; color:var(--chalk-pink);">This is a test</label>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="prog-isproject-${i}" style="width:auto;" ${t.isProject ? 'checked' : ''}>
+            <label for="prog-isproject-${i}" style="margin:0; cursor:pointer; color:var(--chalk-yellow);">This is a project</label>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="prog-isassignment-${i}" style="width:auto;" ${t.isAssignment ? 'checked' : ''}>
+            <label for="prog-isassignment-${i}" style="margin:0; cursor:pointer; color:var(--chalk-mint);">This is an assignment</label>
+          </div>
         </div>
       </div>`).join('');
     return `
@@ -1120,13 +1135,15 @@
           start: (root.querySelector('#prog-start-' + i) || {}).value || t.start,
           end: (root.querySelector('#prog-end-' + i) || {}).value || t.end,
           note: (root.querySelector('#prog-note-' + i) || {}).value || t.note,
-          isTest: (root.querySelector('#prog-istest-' + i) || {}).checked || false
+          isTest: (root.querySelector('#prog-istest-' + i) || {}).checked || false,
+          isProject: (root.querySelector('#prog-isproject-' + i) || {}).checked || false,
+          isAssignment: (root.querySelector('#prog-isassignment-' + i) || {}).checked || false
         }));
         modal.subject = root.querySelector('#prog-subject').value;
         modal.info = root.querySelector('#prog-info').value;
         modal.day = root.querySelector('#prog-day').value;
         const newPeriods = parseInt(jpSelect.value, 10);
-        while (modal.times.length < newPeriods) modal.times.push({ start: '', end: '', note: '', isTest: false });
+        while (modal.times.length < newPeriods) modal.times.push({ start: '', end: '', note: '', isTest: false, isProject: false, isAssignment: false });
         modal.times = modal.times.slice(0, newPeriods);
         modal.periods = newPeriods;
         render();
@@ -1140,7 +1157,9 @@
             start: (root.querySelector('#prog-start-' + i) || {}).value || '',
             end: (root.querySelector('#prog-end-' + i) || {}).value || '',
             note: (root.querySelector('#prog-note-' + i) || {}).value || '',
-            isTest: (root.querySelector('#prog-istest-' + i) || {}).checked || false
+            isTest: (root.querySelector('#prog-istest-' + i) || {}).checked || false,
+            isProject: (root.querySelector('#prog-isproject-' + i) || {}).checked || false,
+            isAssignment: (root.querySelector('#prog-isassignment-' + i) || {}).checked || false
           });
         }
         submitProgram({
