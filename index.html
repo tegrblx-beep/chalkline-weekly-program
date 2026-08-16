@@ -186,6 +186,12 @@
     font-size: 11px; opacity: 0.5; transition: opacity 0.15s, color 0.15s; line-height: 1; padding: 2px 4px; z-index: 2; }
   .entry-dup:hover, .entry-dup:active { color: var(--chalk-yellow); opacity: 1; }
   .day-empty { font-size: 11.5px; color: rgba(199,207,197,0.4); padding: 6px 2px; font-style: italic; }
+  .entry-card[draggable="true"] { cursor: grab; }
+  .entry-card[draggable="true"]:active { cursor: grabbing; }
+  .entry-card.dragging { opacity: 0.35; }
+  .entry-card.drag-over-top { box-shadow: inset 0 3px 0 0 var(--chalk-yellow); }
+  .entry-card.drag-over-bottom { box-shadow: inset 0 -3px 0 0 var(--chalk-yellow); }
+  .day-col.drag-over-empty { outline: 1.5px dashed var(--chalk-yellow); outline-offset: 4px; border-radius: 8px; }
 
   .big-empty { margin-top: 60px; text-align: center; color: var(--chalk-dim); }
   .big-empty .marker { font-family: 'Permanent Marker', cursive; font-size: 24px; color: var(--chalk);
@@ -390,6 +396,22 @@
       }
     });
 
+    // migration: give every program a manual sort order (for drag-to-reorder),
+    // seeded from the current time-based order so nothing jumps around on first load
+    const orderMax = {};
+    state.programs
+      .slice()
+      .sort((a, b) => ((a.times && a.times[0] && a.times[0].start) || '').localeCompare((b.times && b.times[0] && b.times[0].start) || ''))
+      .forEach(p => {
+        const key = p.weekId + '|' + p.day;
+        if (typeof p.order !== 'number') {
+          orderMax[key] = (orderMax[key] || 0) + 10;
+          p.order = orderMax[key];
+        } else {
+          orderMax[key] = Math.max(orderMax[key] || 0, p.order);
+        }
+      });
+
     render();
   }
 
@@ -525,13 +547,32 @@
     });
   }
 
+  function nextOrderInDay(weekId, day) {
+    const inDay = state.programs.filter(p => p.weekId === weekId && p.day === day);
+    if (!inDay.length) return 10;
+    return Math.max(...inDay.map(p => p.order || 0)) + 10;
+  }
+
+  function reorderProgram(draggedId, targetDay, targetIndex) {
+    const p = state.programs.find(x => x.id === draggedId);
+    if (!p) return;
+    p.day = targetDay;
+    const rest = state.programs.filter(x => x.weekId === p.weekId && x.day === targetDay && x.id !== draggedId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    const idx = Math.max(0, Math.min(targetIndex, rest.length));
+    rest.splice(idx, 0, p);
+    rest.forEach((entry, i) => { entry.order = i * 10; });
+    saveState(); render();
+  }
+
   function submitProgram(data) {
     if (!data.subject.trim() || !data.times[0] || !data.times[0].start) return;
     if (modal.mode === 'edit') {
       const p = state.programs.find(x => x.id === modal.id);
       if (p) Object.assign(p, data);
     } else {
-      state.programs.push({ id: uid(), classId: state.selectedClassId, ...data });
+      const order = nextOrderInDay(data.weekId, data.day);
+      state.programs.push({ id: uid(), classId: state.selectedClassId, ...data, order });
     }
     modal = null; saveState(); render();
   }
@@ -545,7 +586,7 @@
     });
   }
   function duplicateProgram(p) {
-    const copy = { ...p, id: uid(), times: (p.times || []).map(t => ({ ...t })) };
+    const copy = { ...p, id: uid(), times: (p.times || []).map(t => ({ ...t })), order: nextOrderInDay(p.weekId, p.day) };
     state.programs.push(copy);
     saveState(); render();
     openEditProgram(copy);
@@ -607,8 +648,10 @@
   }
   function pasteDay(clsId, weekId, day) {
     if (!clipboard) return;
+    let order = nextOrderInDay(weekId, day);
     clipboard.entries.forEach(e => {
-      state.programs.push({ id: uid(), classId: clsId, weekId, day, ...e });
+      state.programs.push({ id: uid(), classId: clsId, weekId, day, ...e, order });
+      order += 10;
     });
     saveState(); render();
   }
@@ -727,7 +770,7 @@
 
     const dayCols = DAYS.map((day, dayIdx) => {
       const entries = weekPrograms.filter(p => p.day === day && matchesSearch(p))
-        .sort((a, b) => ((a.times && a.times[0] && a.times[0].start) || '').localeCompare((b.times && b.times[0] && b.times[0].start) || ''));
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
       const hasEntries = state.programs.some(p => p.classId === cls.id && p.weekId === currentWeek.id && p.day === day);
       const isToday = dayIdx === todayIdx;
 
@@ -742,7 +785,8 @@
         const subjSize = periods === 1 ? 'normal' : periods === 2 ? 'big' : 'huge';
         const stack = Array.from({ length: periods }).map(() => '<div class="period-block"></div>').join('');
         return `
-        <div class="entry-card" style="--card-color:${cls.color}; min-height:${minH}px" data-edit-program="${p.id}">
+        <div class="entry-card" style="--card-color:${cls.color}; min-height:${minH}px" data-edit-program="${p.id}"
+          draggable="${q ? 'false' : 'true'}" data-drag-id="${p.id}" data-day="${day}" title="Drag to reorder">
           <button class="entry-dup" data-dup-program="${p.id}" aria-label="Duplicate entry" title="Duplicate">⧉</button>
           <button class="entry-del" data-del-program="${p.id}" aria-label="Delete entry">✕</button>
           <div class="period-stack">${stack}</div>
@@ -755,7 +799,7 @@
       }).join('');
 
       return `
-        <div class="day-col">
+        <div class="day-col" data-day-col="${day}">
           <div class="day-col-header">
             <span>${day} ${isToday ? '<span class="week-today-badge">TODAY</span>' : ''}</span>
             <span class="day-actions">
@@ -958,6 +1002,72 @@
     root.querySelectorAll('[data-add-day]').forEach(el => el.addEventListener('click', () => openAddProgram(el.dataset.addDay)));
     root.querySelectorAll('[data-copy-day]').forEach(el => el.addEventListener('click', () => { if (!el.disabled && currentWeek) copyDay(cls.id, currentWeek.id, el.dataset.copyDay); }));
     root.querySelectorAll('[data-paste-day]').forEach(el => el.addEventListener('click', () => { if (!el.disabled && currentWeek) pasteDay(cls.id, currentWeek.id, el.dataset.pasteDay); }));
+
+    // --- Drag & drop reordering of program cards within/between day columns ---
+    let dragId = null;
+    let dragOverTarget = null; // { day, index }
+
+    function clearDragIndicators() {
+      root.querySelectorAll('.entry-card.drag-over-top, .entry-card.drag-over-bottom')
+        .forEach(el => el.classList.remove('drag-over-top', 'drag-over-bottom'));
+      root.querySelectorAll('.day-col.drag-over-empty').forEach(el => el.classList.remove('drag-over-empty'));
+    }
+
+    root.querySelectorAll('.entry-card[draggable="true"]').forEach(card => {
+      card.addEventListener('dragstart', (e) => {
+        if (e.target.closest('.entry-del, .entry-dup')) { e.preventDefault(); return; }
+        dragId = card.dataset.dragId;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', dragId);
+      });
+      card.addEventListener('dragend', () => {
+        dragId = null; dragOverTarget = null;
+        clearDragIndicators();
+        card.classList.remove('dragging');
+      });
+      card.addEventListener('dragover', (e) => {
+        if (!dragId || card.dataset.dragId === dragId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = card.getBoundingClientRect();
+        const before = (e.clientY - rect.top) < rect.height / 2;
+        clearDragIndicators();
+        card.classList.add(before ? 'drag-over-top' : 'drag-over-bottom');
+        const day = card.dataset.day;
+        const dayCards = Array.from(root.querySelectorAll(`.entry-card[data-day="${day}"]`))
+          .filter(c => c.dataset.dragId !== dragId);
+        let index = dayCards.indexOf(card);
+        if (!before) index += 1;
+        dragOverTarget = { day, index };
+      });
+      card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (dragId && dragOverTarget) reorderProgram(dragId, dragOverTarget.day, dragOverTarget.index);
+        dragId = null; dragOverTarget = null;
+      });
+    });
+
+    root.querySelectorAll('[data-day-col]').forEach(col => {
+      col.addEventListener('dragover', (e) => {
+        if (!dragId || e.target.closest('.entry-card')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        clearDragIndicators();
+        col.classList.add('drag-over-empty');
+        const day = col.dataset.dayCol;
+        const dayCards = Array.from(root.querySelectorAll(`.entry-card[data-day="${day}"]`))
+          .filter(c => c.dataset.dragId !== dragId);
+        dragOverTarget = { day, index: dayCards.length };
+      });
+      col.addEventListener('drop', (e) => {
+        if (e.target.closest('.entry-card')) return;
+        e.preventDefault();
+        if (dragId && dragOverTarget) reorderProgram(dragId, dragOverTarget.day, dragOverTarget.index);
+        dragId = null; dragOverTarget = null;
+      });
+    });
 
     const overlay = root.querySelector('[data-overlay]');
     if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
