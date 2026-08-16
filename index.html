@@ -182,9 +182,6 @@
   .entry-del { position: absolute; top: 6px; right: 6px; background: none; border: none; color: var(--chalk-dim);
     font-size: 13px; opacity: 0.5; transition: opacity 0.15s, color 0.15s; line-height: 1; padding: 2px 4px; z-index: 2; }
   .entry-del:hover, .entry-del:active { color: var(--chalk-pink); opacity: 1; }
-  .entry-dup { position: absolute; top: 6px; right: 24px; background: none; border: none; color: var(--chalk-dim);
-    font-size: 11px; opacity: 0.5; transition: opacity 0.15s, color 0.15s; line-height: 1; padding: 2px 4px; z-index: 2; }
-  .entry-dup:hover, .entry-dup:active { color: var(--chalk-yellow); opacity: 1; }
   .day-empty { font-size: 11.5px; color: rgba(199,207,197,0.4); padding: 6px 2px; font-style: italic; }
 
   .big-empty { margin-top: 60px; text-align: center; color: var(--chalk-dim); }
@@ -222,52 +219,6 @@
   .loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; color: var(--chalk-dim);
     font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
 
-  /* ---------- Week chip edit ---------- */
-  .week-chip-edit { background: none; border: none; color: var(--chalk-dim); font-size: 11px; opacity: 0.55;
-    padding: 4px 2px 4px 4px; transition: opacity 0.15s, color 0.15s; }
-  .week-chip-edit:hover, .week-chip-edit:active { color: var(--chalk-yellow); opacity: 1; }
-  .week-chip-dates { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; opacity: 0.75; }
-  .week-today-badge { font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
-    color: var(--board-darker); background: var(--chalk-mint); border-radius: 4px; padding: 1px 5px; }
-
-  /* ---------- Toolbar row: search + totals + print + backup ---------- */
-  .toolbar-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-  .search-box { position: relative; flex: 1; min-width: 160px; max-width: 260px; }
-  .search-box input { width: 100%; background: rgba(242,239,228,0.07); border: 1px solid rgba(242,239,228,0.2);
-    border-radius: 20px; padding: 8px 14px 8px 30px; color: var(--chalk); font-size: 12.5px; }
-  .search-box::before { content: "🔍"; position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-    font-size: 11px; opacity: 0.6; pointer-events: none; }
-  .search-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none;
-    color: var(--chalk-dim); font-size: 12px; padding: 4px; }
-  .search-clear:hover { color: var(--chalk-pink); }
-  .week-totals { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--chalk-dim); white-space: nowrap; }
-  .toolbar-spacer { flex: 1; }
-  .small-ghost-btn { background: transparent; color: var(--chalk-dim); border: 1px solid rgba(242,239,228,0.25);
-    border-radius: 20px; padding: 7px 13px; font-size: 12.5px; font-weight: 600; white-space: nowrap;
-    transition: border-color 0.15s, color 0.15s; }
-  .small-ghost-btn:hover { border-color: var(--chalk-yellow); color: var(--chalk-yellow); }
-  .no-results { font-size: 12.5px; color: var(--chalk-dim); font-style: italic; padding: 20px 4px; text-align: center; }
-
-  /* ---------- Toast ---------- */
-  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 100;
-    background: var(--board-darker); border: 1px solid rgba(242,239,228,0.2); border-radius: 30px;
-    padding: 10px 10px 10px 18px; display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--chalk);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
-  .toast button { background: none; border: none; color: var(--chalk-yellow); font-size: 13px; font-weight: 700; padding: 6px 10px; }
-  .toast button:hover { text-decoration: underline; }
-  .toast .toast-dismiss { color: var(--chalk-dim); font-weight: 400; padding: 6px 4px; }
-
-  #import-file-input { display: none; }
-
-  @media print {
-    .sidebar, .weeks-panel .new-week-btn, .week-chip-del, .week-chip-edit, .toolbar-row, .primary-btn,
-    .class-title-actions, .day-actions, .entry-del, .clip-banner, .error-banner, .toast { display: none !important; }
-    body, .board { background: white !important; color: black !important; }
-    .main { padding: 0 !important; }
-    .entry-card, .day-col-header, .class-title, .entry-subject, .entry-materials, .entry-info, .entry-time-row { color: black !important; }
-    .entry-card { border-color: #999 !important; background: white !important; }
-  }
-
   @media (max-width: 900px) {
     .app { flex-direction: column; }
     .sidebar { width: 100%; flex-direction: row; align-items: center; border-right: none;
@@ -299,37 +250,6 @@
   let modal = null;
   let clipboard = null; // { sourceDay, entries: [...] }
   let saveError = false;
-  let searchText = '';
-  let searchFocused = false;
-  let toast = null; // { message, actionLabel, onAction }
-  let toastTimer = null;
-
-  function showToast(message, actionLabel, onAction, duration) {
-    if (toastTimer) clearTimeout(toastTimer);
-    toast = { message, actionLabel, onAction };
-    render();
-    toastTimer = setTimeout(() => { toast = null; render(); }, duration || 6000);
-  }
-  function dismissToast() { if (toastTimer) clearTimeout(toastTimer); toast = null; render(); }
-
-  function todayISO() {
-    const d = new Date(); const p = n => String(n).padStart(2, '0');
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
-  }
-  function fmtDateShort(iso) {
-    if (!iso) return '';
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
-  // returns the DAYS index (0=Mon..6=Sun) that "today" falls on within this week, or -1 if today isn't in range
-  function todayDayInWeek(week) {
-    if (!week || !week.startDate) return -1;
-    const start = new Date(week.startDate + 'T00:00:00');
-    const end = week.endDate ? new Date(week.endDate + 'T00:00:00') : new Date(start.getTime() + 6 * 86400000);
-    const now = new Date(); now.setHours(0, 0, 0, 0);
-    if (now < start || now > end) return -1;
-    return Math.round((now - start) / 86400000) % 7;
-  }
 
   const root = document.getElementById('root');
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -345,9 +265,10 @@
 
   async function loadState() {
     try {
-      const res = await window.storage.get(STORAGE_KEY, false);
-      if (res && res.value) {
-        const parsed = JSON.parse(res.value);
+      // FIX: Changed window.storage.get to standard localStorage.getItem
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
         state.classes = parsed.classes || [];
         state.weeks = parsed.weeks || [];
         state.selectedWeekByClass = parsed.selectedWeekByClass || {};
@@ -355,7 +276,6 @@
           const periods = p.periods || 1;
           let times = p.times;
           if (!times) {
-            // old data: one shared "materials" text for the whole entry — put it on period 1
             times = [{ start: p.start || '', end: p.end || '', note: p.materials || '', isTest: false }];
             while (times.length < periods) times.push({ start: '', end: '', note: '', isTest: false });
           } else {
@@ -370,7 +290,9 @@
         });
         state.selectedClassId = parsed.selectedClassId || (state.classes[0] ? state.classes[0].id : null);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Could not load planner data', e);
+    }
 
     // migration: every class needs at least one week; bucket any pre-existing weekId-less entries into it
     state.classes.forEach(cls => {
@@ -393,10 +315,14 @@
 
   async function saveState(isRetry) {
     try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify({
+      const dataToSave = JSON.stringify({
         classes: state.classes, programs: state.programs, weeks: state.weeks,
         selectedClassId: state.selectedClassId, selectedWeekByClass: state.selectedWeekByClass
-      }), false);
+      });
+      
+      // FIX: Changed window.storage.set to standard localStorage.setItem
+      localStorage.setItem(STORAGE_KEY, dataToSave);
+      
       if (saveError) { saveError = false; render(); }
     } catch (e) {
       console.error('Could not save planner data', e);
@@ -407,6 +333,7 @@
       }
     }
   }
+
 
   function nextColor() {
     const used = state.classes.map(c => c.color);
@@ -430,21 +357,14 @@
     }
     clipboard = null; saveState(); render();
   }
-  function openAddClass() { modal = { type: 'class', mode: 'add', color: nextColor() }; render(); }
-  function openEditClass(cls) { modal = { type: 'class', mode: 'edit', id: cls.id, name: cls.name, color: cls.color }; render(); }
+  function openAddClass() { modal = { type: 'class', color: nextColor() }; render(); }
   function openConfirm(message, onConfirm) { modal = { type: 'confirm', message, onConfirm }; render(); }
   function openNewWeek() {
     if (!state.selectedClassId) return;
     const weeks = getClassWeeks(state.selectedClassId);
     const currentWeek = getSelectedWeek(state.selectedClassId);
     const hasEntries = currentWeek && state.programs.some(p => p.weekId === currentWeek.id);
-    modal = { type: 'week', mode: 'add', label: 'Week ' + (weeks.length + 1), startDate: '', endDate: '',
-      canCopy: !!hasEntries, copyPrev: !!hasEntries };
-    render();
-  }
-  function openEditWeek(week) {
-    modal = { type: 'week', mode: 'edit', id: week.id, label: week.label,
-      startDate: week.startDate || '', endDate: week.endDate || '', canCopy: false, copyPrev: false };
+    modal = { type: 'week', label: 'Week ' + (weeks.length + 1), canCopy: !!hasEntries, copyPrev: !!hasEntries };
     render();
   }
   function openAddProgram(day) { if (!state.selectedClassId) return;
@@ -461,11 +381,6 @@
 
   function submitClass(name, color) {
     if (!name.trim()) return;
-    if (modal.mode === 'edit') {
-      const cls = state.classes.find(c => c.id === modal.id);
-      if (cls) { cls.name = name.trim(); cls.color = color; }
-      modal = null; saveState(); render(); return;
-    }
     const cls = { id: uid(), name: name.trim(), color };
     state.classes.push(cls);
     const week = { id: uid(), classId: cls.id, label: 'Week 1', createdAt: Date.now() };
@@ -484,16 +399,11 @@
     });
   }
 
-  function submitWeek(label, copyPrev, startDate, endDate) {
+  function submitWeek(label, copyPrev) {
     if (!label.trim() || !state.selectedClassId) return;
-    if (modal.mode === 'edit') {
-      const w = state.weeks.find(x => x.id === modal.id);
-      if (w) { w.label = label.trim(); w.startDate = startDate || ''; w.endDate = endDate || ''; }
-      modal = null; saveState(); render(); return;
-    }
     const clsId = state.selectedClassId;
     const prevWeek = getSelectedWeek(clsId);
-    const newWeek = { id: uid(), classId: clsId, label: label.trim(), startDate: startDate || '', endDate: endDate || '', createdAt: Date.now() };
+    const newWeek = { id: uid(), classId: clsId, label: label.trim(), createdAt: Date.now() };
     state.weeks.push(newWeek);
     if (copyPrev && prevWeek) {
       state.programs.filter(p => p.weekId === prevWeek.id).forEach(p => {
@@ -529,20 +439,6 @@
     modal = null; saveState(); render();
   }
   function deleteProgramById(id) { state.programs = state.programs.filter(p => p.id !== id); saveState(); render(); }
-  function quickDeleteProgram(id) {
-    const p = state.programs.find(x => x.id === id);
-    if (!p) return;
-    deleteProgramById(id);
-    showToast('Entry deleted.', 'Undo', () => {
-      state.programs.push(p); saveState(); render();
-    });
-  }
-  function duplicateProgram(p) {
-    const copy = { ...p, id: uid(), times: (p.times || []).map(t => ({ ...t })) };
-    state.programs.push(copy);
-    saveState(); render();
-    openEditProgram(copy);
-  }
   function deleteCurrentInModal() {
     if (!modal || modal.mode !== 'edit') return;
     const id = modal.id;
@@ -553,43 +449,6 @@
       state = { classes: [], programs: [], weeks: [], selectedClassId: null, selectedWeekByClass: {} };
       clipboard = null; modal = null; saveState(); render();
     });
-  }
-
-  function exportData() {
-    const payload = {
-      classes: state.classes, programs: state.programs, weeks: state.weeks,
-      selectedClassId: state.selectedClassId, selectedWeekByClass: state.selectedWeekByClass,
-      exportedAt: new Date().toISOString()
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'weekly-planner-backup-' + todayISO() + '.json';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Backup downloaded.', null, null, 3000);
-  }
-  function triggerImport() { const inp = document.getElementById('import-file-input'); if (inp) inp.click(); }
-  function importDataFromFile(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      let parsed;
-      try { parsed = JSON.parse(reader.result); } catch (e) { showToast('That file could not be read as backup data.', null, null, 4000); return; }
-      if (!parsed || !Array.isArray(parsed.classes) || !Array.isArray(parsed.programs)) {
-        showToast('That file does not look like a planner backup.', null, null, 4000); return;
-      }
-      openConfirm('Import this backup and replace everything currently on the board?', () => {
-        state.classes = parsed.classes || [];
-        state.programs = parsed.programs || [];
-        state.weeks = parsed.weeks || [];
-        state.selectedWeekByClass = parsed.selectedWeekByClass || {};
-        state.selectedClassId = parsed.selectedClassId || (state.classes[0] ? state.classes[0].id : null);
-        modal = null; clipboard = null; saveState(); render();
-        showToast('Backup imported.', null, null, 3000);
-      });
-    };
-    reader.readAsText(file);
   }
 
   function copyDay(clsId, weekId, day) {
@@ -615,18 +474,8 @@
         ${renderMain(selectedClass)}
       </div>
       ${modal ? renderModal(selectedClass) : ''}
-      ${toast ? renderToast() : ''}
     `;
     attachHandlers(selectedClass);
-  }
-
-  function renderToast() {
-    return `
-      <div class="toast">
-        <span>${esc(toast.message)}</span>
-        ${toast.actionLabel ? `<button data-toast-action>${esc(toast.actionLabel)}</button>` : ''}
-        <button class="toast-dismiss" data-toast-dismiss aria-label="Dismiss">✕</button>
-      </div>`;
   }
 
   function renderSidebar() {
@@ -643,10 +492,7 @@
         </div>
         <div class="class-list">${items || '<div class="empty-classes">No classes yet.</div>'}</div>
         <button class="add-class-btn" data-add-class>+ Add class</button>
-        <div class="sidebar-footer">
-          <button data-export-data>Download backup</button> · <button data-import-data>Import backup</button> · <button data-clear-all>Clear all data</button>
-          <input type="file" id="import-file-input" accept="application/json">
-        </div>
+        <div class="sidebar-footer"><button data-clear-all>Clear all data</button></div>
       </div>`;
   }
 
@@ -654,15 +500,10 @@
     const weeks = getClassWeeks(cls.id);
     const chips = weeks.map(w => {
       const count = state.programs.filter(p => p.weekId === w.id).length;
-      const dateRange = w.startDate ? `<span class="week-chip-dates">${fmtDateShort(w.startDate)}${w.endDate ? '–' + fmtDateShort(w.endDate) : ''}</span>` : '';
-      const isCurrent = todayDayInWeek(w) > -1;
       return `
       <div class="week-chip ${currentWeek && w.id === currentWeek.id ? 'active' : ''}" data-select-week="${w.id}" style="--tab-color:${cls.color}">
         <span>${esc(w.label)}</span>
-        ${dateRange}
-        ${isCurrent ? '<span class="week-today-badge">NOW</span>' : ''}
         <span class="week-chip-count">${count}</span>
-        <button class="week-chip-edit" data-edit-week="${w.id}" aria-label="Rename week" title="Rename / set dates">✎</button>
         <button class="week-chip-del" data-del-week="${w.id}" aria-label="Delete week" title="Delete this week">✕</button>
       </div>`;
     }).join('');
@@ -689,10 +530,7 @@
             <div class="class-title-row">
               <span class="class-title-dot" style="--cur-color:${cls.color}"></span>
               <span class="class-title">${esc(cls.name)}</span>
-              <span class="class-title-actions">
-                <button class="icon-btn" data-edit-class="${cls.id}" aria-label="Edit class">✎</button>
-                <button class="icon-btn" data-del-class="${cls.id}" aria-label="Delete class">🗑</button>
-              </span>
+              <span class="class-title-actions"><button class="icon-btn" data-del-class="${cls.id}" aria-label="Delete class">🗑</button></span>
             </div>
           </div>
           ${weeksPanel}
@@ -709,20 +547,10 @@
         <button data-clear-clip>clear</button>
       </div>` : '';
 
-    const weekPrograms = state.programs.filter(p => p.classId === cls.id && p.weekId === currentWeek.id);
-    const totalEntries = weekPrograms.length;
-    const totalPeriods = weekPrograms.reduce((sum, p) => sum + (p.periods || 1), 0);
-    const q = searchText.trim().toLowerCase();
-    const matchesSearch = p => !q || p.subject.toLowerCase().includes(q) ||
-      (p.info || '').toLowerCase().includes(q) || (p.times || []).some(t => (t.note || '').toLowerCase().includes(q));
-    const anyMatch = !q || weekPrograms.some(matchesSearch);
-    const todayIdx = todayDayInWeek(currentWeek);
-
-    const dayCols = DAYS.map((day, dayIdx) => {
-      const entries = weekPrograms.filter(p => p.day === day && matchesSearch(p))
+    const dayCols = DAYS.map(day => {
+      const entries = state.programs.filter(p => p.classId === cls.id && p.weekId === currentWeek.id && p.day === day)
         .sort((a, b) => ((a.times && a.times[0] && a.times[0].start) || '').localeCompare((b.times && b.times[0] && b.times[0].start) || ''));
-      const hasEntries = state.programs.some(p => p.classId === cls.id && p.weekId === currentWeek.id && p.day === day);
-      const isToday = dayIdx === todayIdx;
+      const hasEntries = entries.length > 0;
 
       const cards = entries.map(p => {
         const periods = p.periods || 1;
@@ -736,7 +564,6 @@
         const stack = Array.from({ length: periods }).map(() => '<div class="period-block"></div>').join('');
         return `
         <div class="entry-card" style="--card-color:${cls.color}; min-height:${minH}px" data-edit-program="${p.id}">
-          <button class="entry-dup" data-dup-program="${p.id}" aria-label="Duplicate entry" title="Duplicate">⧉</button>
           <button class="entry-del" data-del-program="${p.id}" aria-label="Delete entry">✕</button>
           <div class="period-stack">${stack}</div>
           <div class="entry-content">
@@ -750,14 +577,14 @@
       return `
         <div class="day-col">
           <div class="day-col-header">
-            <span>${day} ${isToday ? '<span class="week-today-badge">TODAY</span>' : ''}</span>
+            <span>${day}</span>
             <span class="day-actions">
               <button class="day-icon-btn" data-copy-day="${day}" ${!hasEntries ? 'disabled' : ''} title="Copy ${DAY_FULL[day]}'s schedule">⧉</button>
               <button class="day-icon-btn" data-paste-day="${day}" ${!clipboard ? 'disabled' : ''} title="Paste into ${DAY_FULL[day]}">📋</button>
               <button class="day-icon-btn" data-add-day="${day}" title="Add entry to ${DAY_FULL[day]}">+</button>
             </span>
           </div>
-          ${cards || (q && hasEntries ? '<div class="day-empty">no match</div>' : '<div class="day-empty">—</div>')}
+          ${cards || '<div class="day-empty">—</div>'}
         </div>`;
     }).join('');
 
@@ -767,25 +594,13 @@
           <div class="class-title-row">
             <span class="class-title-dot" style="--cur-color:${cls.color}"></span>
             <span class="class-title">${esc(cls.name)}</span>
-            <span class="class-title-actions">
-              <button class="icon-btn" data-edit-class="${cls.id}" aria-label="Edit class">✎</button>
-              <button class="icon-btn" data-del-class="${cls.id}" aria-label="Delete class">🗑</button>
-            </span>
+            <span class="class-title-actions"><button class="icon-btn" data-del-class="${cls.id}" aria-label="Delete class">🗑</button></span>
           </div>
           <button class="primary-btn" data-add-program>+ Add program</button>
         </div>
         ${weeksPanel}
         ${saveError ? `<div class="error-banner">⚠ Couldn't save your last change to the server — it's still here on screen, but won't survive a refresh yet. <button data-retry-save>Retry save</button></div>` : ''}
         ${clipBanner}
-        <div class="toolbar-row">
-          <div class="search-box">
-            <input type="text" id="search-input" placeholder="Filter by subject or notes…" value="${esc(searchText)}">
-            ${searchText ? `<button class="search-clear" data-clear-search aria-label="Clear filter">✕</button>` : ''}
-          </div>
-          <span class="week-totals">${totalEntries} ${totalEntries === 1 ? 'entry' : 'entries'} · ${totalPeriods} ${totalPeriods === 1 ? 'period' : 'periods'} this week</span>
-          <span class="toolbar-spacer"></span>
-          <button class="small-ghost-btn" data-print-week title="Print this week's schedule">🖨 Print</button>
-        </div>
         <div class="week-grid-scroll"><div class="week-grid">${dayCols}</div></div>
         ${datalist}
       </div>`;
@@ -807,36 +622,28 @@
     }
 
     if (modal.type === 'class') {
-      const isEditCls = modal.mode === 'edit';
       const swatches = PALETTE.map(p => `<button type="button" class="color-swatch-btn ${p.hex === modal.color ? 'selected' : ''}" style="--c:${p.hex}" data-pick-color="${p.hex}"></button>`).join('');
       return `
         <div class="modal-overlay" data-overlay>
           <div class="modal">
-            <h2>${isEditCls ? 'Edit class' : 'New class'}</h2>
-            <div class="field"><label for="cls-name">Class name</label><input type="text" id="cls-name" placeholder="e.g. Grade 7C" value="${esc(modal.name || '')}" autofocus></div>
+            <h2>New class</h2>
+            <div class="field"><label for="cls-name">Class name</label><input type="text" id="cls-name" placeholder="e.g. Grade 7C" autofocus></div>
             <div class="field"><label>Color</label><div class="color-picker">${swatches}</div></div>
             <div class="modal-actions"><span></span><div class="modal-actions-right">
               <button class="cancel-btn" data-close>Cancel</button>
-              <button class="primary-btn" data-save-class>${isEditCls ? 'Save changes' : 'Add class'}</button>
+              <button class="primary-btn" data-save-class>Add class</button>
             </div></div>
           </div>
         </div>`;
     }
 
     if (modal.type === 'week') {
-      const isEditWk = modal.mode === 'edit';
       return `
         <div class="modal-overlay" data-overlay>
           <div class="modal">
-            <h2>${isEditWk ? 'Edit week' : 'New week'}</h2>
+            <h2>New week</h2>
             <div class="field"><label for="week-label">Label</label>
               <input type="text" id="week-label" placeholder="e.g. 17-21 August 2026" value="${esc(modal.label || '')}" autofocus></div>
-            <div class="row3 spaced">
-              <div class="field"><label for="week-start">Start date <span style="opacity:0.6;">(optional)</span></label>
-                <input type="date" id="week-start" value="${esc(modal.startDate || '')}"></div>
-              <div class="field"><label for="week-end">End date <span style="opacity:0.6;">(optional)</span></label>
-                <input type="date" id="week-end" value="${esc(modal.endDate || '')}"></div>
-            </div>
             ${modal.canCopy ? `
             <div class="field" style="display:flex; align-items:center; gap:8px;">
               <input type="checkbox" id="week-copy" style="width:auto;" ${modal.copyPrev ? 'checked' : ''}>
@@ -844,7 +651,7 @@
             </div>` : ''}
             <div class="modal-actions"><span></span><div class="modal-actions-right">
               <button class="cancel-btn" data-close>Cancel</button>
-              <button class="primary-btn" data-save-week>${isEditWk ? 'Save changes' : 'Create week'}</button>
+              <button class="primary-btn" data-save-week>Create week</button>
             </div></div>
           </div>
         </div>`;
@@ -906,44 +713,16 @@
     const clearClipBtn = root.querySelector('[data-clear-clip]'); if (clearClipBtn) clearClipBtn.addEventListener('click', clearClipboard);
     const retryBtn = root.querySelector('[data-retry-save]'); if (retryBtn) retryBtn.addEventListener('click', () => saveState());
     const newWeekBtn = root.querySelector('[data-new-week]'); if (newWeekBtn) newWeekBtn.addEventListener('click', openNewWeek);
-    const printBtn = root.querySelector('[data-print-week]'); if (printBtn) printBtn.addEventListener('click', () => window.print());
-    const exportBtn = root.querySelector('[data-export-data]'); if (exportBtn) exportBtn.addEventListener('click', exportData);
-    const importBtn = root.querySelector('[data-import-data]'); if (importBtn) importBtn.addEventListener('click', triggerImport);
-    const importInput = root.querySelector('#import-file-input');
-    if (importInput) importInput.addEventListener('change', (e) => { importDataFromFile(e.target.files[0]); e.target.value = ''; });
-
-    const searchInput = root.querySelector('#search-input');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => { searchText = e.target.value; render(); });
-      searchInput.addEventListener('focus', () => { searchFocused = true; });
-      searchInput.addEventListener('blur', () => { searchFocused = false; });
-      if (searchFocused) { const pos = searchInput.value.length; searchInput.focus(); searchInput.setSelectionRange(pos, pos); }
-    }
-    const searchClear = root.querySelector('[data-clear-search]'); if (searchClear) searchClear.addEventListener('click', () => { searchText = ''; render(); });
 
     root.querySelectorAll('[data-select-week]').forEach(el => el.addEventListener('click', () => selectWeek(cls.id, el.dataset.selectWeek)));
-    root.querySelectorAll('[data-edit-week]').forEach(el => el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const w = state.weeks.find(x => x.id === el.dataset.editWeek);
-      if (w) openEditWeek(w);
-    }));
     root.querySelectorAll('[data-del-week]').forEach(el => el.addEventListener('click', (e) => {
       e.stopPropagation();
       const w = state.weeks.find(x => x.id === el.dataset.delWeek);
       if (w) deleteWeek(w);
     }));
 
-    root.querySelectorAll('[data-edit-class]').forEach(el => el.addEventListener('click', () => {
-      const c = state.classes.find(x => x.id === el.dataset.editClass);
-      if (c) openEditClass(c);
-    }));
     root.querySelectorAll('[data-del-class]').forEach(el => el.addEventListener('click', () => deleteClass(el.dataset.delClass)));
-    root.querySelectorAll('[data-del-program]').forEach(el => el.addEventListener('click', (e) => { e.stopPropagation(); quickDeleteProgram(el.dataset.delProgram); }));
-    root.querySelectorAll('[data-dup-program]').forEach(el => el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const p = state.programs.find(x => x.id === el.dataset.dupProgram);
-      if (p) duplicateProgram(p);
-    }));
+    root.querySelectorAll('[data-del-program]').forEach(el => el.addEventListener('click', (e) => { e.stopPropagation(); deleteProgramById(el.dataset.delProgram); }));
     root.querySelectorAll('[data-edit-program]').forEach(el => el.addEventListener('click', () => {
       const p = state.programs.find(x => x.id === el.dataset.editProgram);
       if (p) openEditProgram(p);
@@ -956,10 +735,6 @@
     if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
     const closeBtn = root.querySelector('[data-close]'); if (closeBtn) closeBtn.addEventListener('click', closeModal);
     const delInModal = root.querySelector('[data-delete-in-modal]'); if (delInModal) delInModal.addEventListener('click', deleteCurrentInModal);
-
-    const toastActionBtn = root.querySelector('[data-toast-action]');
-    if (toastActionBtn) toastActionBtn.addEventListener('click', () => { const fn = toast && toast.onAction; dismissToast(); if (fn) fn(); });
-    const toastDismissBtn = root.querySelector('[data-toast-dismiss]'); if (toastDismissBtn) toastDismissBtn.addEventListener('click', dismissToast);
 
     if (modal && modal.type === 'confirm') {
       const yesBtn = root.querySelector('[data-confirm-yes]');
@@ -978,8 +753,7 @@
       const saveBtn = root.querySelector('[data-save-week]');
       if (saveBtn) saveBtn.addEventListener('click', () => {
         const copyEl = root.querySelector('#week-copy');
-        submitWeek(root.querySelector('#week-label').value, copyEl ? copyEl.checked : false,
-          root.querySelector('#week-start').value, root.querySelector('#week-end').value);
+        submitWeek(root.querySelector('#week-label').value, copyEl ? copyEl.checked : false);
       });
       const labelInput = root.querySelector('#week-label');
       if (labelInput) { labelInput.focus(); labelInput.select(); labelInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') root.querySelector('[data-save-week]').click(); }); }
@@ -1027,10 +801,6 @@
       });
     }
   }
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { if (modal) closeModal(); else if (toast) dismissToast(); }
-  });
 
   loadState();
 })();
