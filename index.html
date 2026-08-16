@@ -783,8 +783,9 @@
         const timeRows = times.map((t, i) => `
           <div class="entry-time-row">${periods > 1 ? `<span class="p-num">P${i + 1}</span>` : ''}${fmtTime(t.start)}${t.end ? '–' + fmtTime(t.end) : ''}</div>
         `).join('');
+        const notesCount = times.filter(t => t.note).length;
         const materialRows = times.map((t, i) => t.note ? `
-          <div class="entry-materials${t.isTest ? ' is-test' : ''}">${periods > 1 ? `<span class="p-num-inline">P${i + 1}: </span>` : ''}${t.isTest ? '📝 ' : ''}${esc(t.note)}</div>
+          <div class="entry-materials${t.isTest ? ' is-test' : ''}">${notesCount > 1 ? `<span class="p-num-inline">P${i + 1}: </span>` : ''}${t.isTest ? '📝 ' : ''}${esc(t.note)}</div>
         ` : '').join('');
         const subjSize = periods === 1 ? 'normal' : periods === 2 ? 'big' : 'huge';
         const stack = Array.from({ length: periods }).map(() => '<div class="period-block"></div>').join('');
