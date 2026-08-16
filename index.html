@@ -219,6 +219,7 @@
   .color-swatch-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; background: var(--c);
     transition: border-color 0.15s, transform 0.1s; }
   .color-swatch-btn.selected { border-color: var(--chalk); transform: scale(1.1); }
+  .color-swatch-btn.match-class { background: conic-gradient(var(--chalk-yellow), var(--chalk-pink), var(--chalk-blue), var(--chalk-mint), var(--chalk-orange), var(--chalk-lilac)); }
   .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 18px; }
   .modal-actions-right { display: flex; gap: 10px; }
   .cancel-btn { background: transparent; border: none; color: var(--chalk-dim); padding: 10px 14px; font-size: 14px; font-weight: 600; }
@@ -477,13 +478,13 @@
     render();
   }
   function openAddProgram(day) { if (!state.selectedClassId) return;
-    modal = { type: 'program', mode: 'add', day: day || 'Mon', periods: 1, times: [{ start: '', end: '', note: '', isTest: false }] }; render(); }
+    modal = { type: 'program', mode: 'add', day: day || 'Mon', periods: 1, color: null, times: [{ start: '', end: '', note: '', isTest: false }] }; render(); }
   function openEditProgram(p) {
     const periods = p.periods || 1;
     let times = p.times ? p.times.map(t => ({ ...t })) : [{ start: p.start || '', end: p.end || '', note: p.materials || '', isTest: false }];
     while (times.length < periods) times.push({ start: '', end: '', note: '', isTest: false });
     modal = { type: 'program', mode: 'edit', id: p.id, day: p.day, subject: p.subject,
-      info: p.info, periods, times };
+      info: p.info, periods, times, color: p.color || null };
     render();
   }
   function closeModal() { modal = null; render(); }
@@ -642,7 +643,7 @@
 
   function copyDay(clsId, weekId, day) {
     const entries = state.programs.filter(p => p.classId === clsId && p.weekId === weekId && p.day === day)
-      .map(p => ({ times: (p.times || []).map(t => ({ ...t })), subject: p.subject, info: p.info, periods: p.periods || 1 }));
+      .map(p => ({ times: (p.times || []).map(t => ({ ...t })), subject: p.subject, info: p.info, periods: p.periods || 1, color: p.color || null }));
     clipboard = { sourceDay: day, entries };
     render();
   }
@@ -785,7 +786,7 @@
         const subjSize = periods === 1 ? 'normal' : periods === 2 ? 'big' : 'huge';
         const stack = Array.from({ length: periods }).map(() => '<div class="period-block"></div>').join('');
         return `
-        <div class="entry-card" style="--card-color:${cls.color}; min-height:${minH}px" data-edit-program="${p.id}"
+        <div class="entry-card" style="--card-color:${p.color || cls.color}; min-height:${minH}px" data-edit-program="${p.id}"
           draggable="${q ? 'false' : 'true'}" data-drag-id="${p.id}" data-day="${day}" title="Drag to reorder">
           <button class="entry-dup" data-dup-program="${p.id}" aria-label="Duplicate entry" title="Duplicate">⧉</button>
           <button class="entry-del" data-del-program="${p.id}" aria-label="Delete entry">✕</button>
@@ -903,6 +904,8 @@
 
     const dayOptions = DAYS.map(d => `<option value="${d}" ${d === modal.day ? 'selected' : ''}>${DAY_FULL[d]}</option>`).join('');
     const isEdit = modal.mode === 'edit';
+    const progSwatches = PALETTE.map(sw => `<button type="button" class="color-swatch-btn ${sw.hex === modal.color ? 'selected' : ''}" style="--c:${sw.hex}" data-pick-color="${sw.hex}" title="${sw.name}"></button>`).join('');
+    const matchSwatch = `<button type="button" class="color-swatch-btn match-class ${!modal.color ? 'selected' : ''}" data-pick-color="" title="Match class color"></button>`;
     const timeRows = modal.times.map((t, i) => `
       <div class="row3 spaced">
         <div class="field"><label for="prog-start-${i}">Start${modal.periods > 1 ? ' (Period ' + (i + 1) + ')' : ' time'}</label>
@@ -933,6 +936,7 @@
           </div>
           <div class="field"><label for="prog-subject">Subject</label>
             <input type="text" id="prog-subject" list="subject-list" placeholder="e.g. Math" value="${esc(modal.subject || '')}"></div>
+          <div class="field"><label>Color</label><div class="color-picker">${matchSwatch}${progSwatches}</div></div>
           ${timeRows}
           <div class="field"><label for="prog-info">Info</label>
             <textarea id="prog-info" placeholder="e.g. Bring textbook, workbook, laptop">${esc(modal.info || '')}</textarea></div>
@@ -1103,6 +1107,7 @@
     }
 
     if (modal && modal.type === 'program') {
+      root.querySelectorAll('[data-pick-color]').forEach(el => el.addEventListener('click', () => { modal.color = el.dataset.pickColor || null; render(); }));
       const jpSelect = root.querySelector('#prog-jp');
       if (jpSelect) jpSelect.addEventListener('change', () => {
         // preserve whatever the user already typed before resizing the rows
@@ -1139,6 +1144,7 @@
           times,
           subject: root.querySelector('#prog-subject').value,
           info: root.querySelector('#prog-info').value,
+          color: modal.color || null,
           weekId: currentWeek ? currentWeek.id : null
         });
       });
